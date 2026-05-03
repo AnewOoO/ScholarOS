@@ -19,11 +19,11 @@ ScholarOS 是一个本地研究工作台，覆盖四段流程：
 - **Code Interpreter Agent**：读取 GitHub 仓库或本地目录，分析项目结构，定位训练入口、配置、核心方法、评估脚本，生成运行命令，并做论文-代码对齐。
 - **Paper Writing Agent**：基于论文库生成 Related Work、研究 gap、创新点、论文大纲、实验分析，或润色论文段落。
 
-![pic1](assets\pic1.png)
+![Paper Builder](./assets/pic1.png)
 
-![pic2](assets\pic2.png)
+![Paper Reading](./assets/pic2.png)
 
-![pic1](assets\image.png)
+![ScholarOS Screenshot](./assets/image.png)
 
 ## Project Structure
 
