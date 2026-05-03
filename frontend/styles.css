@@ -398,9 +398,10 @@ a:hover {
 
 .builder-conversation {
   display: grid;
-  grid-template-rows: auto minmax(260px, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 12px;
-  min-height: 390px;
+  height: 460px;
+  min-height: 0;
   border-top: 1px solid var(--border);
   padding-top: 14px;
 }
@@ -464,6 +465,7 @@ a:hover {
 .builder-chat-form textarea {
   min-height: 78px;
   max-height: 180px;
+  resize: none;
 }
 
 .builder-suggestions {
@@ -721,6 +723,10 @@ a:hover {
   .app-shell {
     width: min(100% - 18px, 1440px);
     padding: 9px 0;
+  }
+
+  .builder-conversation {
+    height: 400px;
   }
 
   .form-row,
