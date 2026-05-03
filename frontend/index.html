@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ScholarOS</title>
+    <link rel="stylesheet" href="/frontend/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar" aria-label="论文库与研究画像">
+        <div class="brand-row">
+          <div>
+            <p class="eyebrow">ScholarOS</p>
+            <h1>研究工作台</h1>
+          </div>
+          <button id="newSessionButton" class="ghost-button" type="button">新建</button>
+        </div>
+
+        <p id="libraryStatus" class="muted">正在加载论文库...</p>
+
+        <section class="side-section" aria-label="历史论文库">
+          <div class="section-header">
+            <h2>历史论文库</h2>
+            <button id="refreshSessionsButton" class="icon-button" type="button" title="刷新">↻</button>
+          </div>
+          <div id="sessionList" class="session-list"></div>
+        </section>
+
+        <label class="field">
+          <span>用户研究画像</span>
+          <textarea
+            id="profileInput"
+            rows="8"
+            placeholder="例如：关注 OOD、RAG、LLM Agent；偏好近两年论文；需要代码与实验细节。"
+          ></textarea>
+        </label>
+      </aside>
+
+      <section class="workspace" aria-label="四阶段 Agent 工作流">
+        <header class="workspace-header">
+          <div>
+            <p class="eyebrow">Research Pipeline</p>
+            <h2>推荐论文 → 精读论文 → 代码对齐 → 论文写作</h2>
+          </div>
+          <nav class="agent-tabs" aria-label="Agent 切换">
+            <button class="agent-tab active" type="button" data-agent="builder">Paper Builder</button>
+            <button class="agent-tab" type="button" data-agent="reader">Paper Reading</button>
+            <button class="agent-tab" type="button" data-agent="code">Code Interpreter</button>
+            <button class="agent-tab" type="button" data-agent="writer">Paper Writing</button>
+          </nav>
+        </header>
+
+        <section id="builderPanel" class="agent-panel active">
+          <div class="panel-grid builder-grid">
+            <section class="tool-panel builder-agent-panel">
+              <div class="panel-title">
+                <div>
+                  <p class="eyebrow">Stage 1</p>
+                  <h2>Paper Builder Agent</h2>
+                </div>
+                <span class="stage-badge">构建论文库</span>
+              </div>
+
+              <form id="builderForm" class="stack-form">
+                <label class="field">
+                  <span>研究方向</span>
+                  <input id="directionInput" name="direction" value="OE Dataset Selection" required />
+                </label>
+
+                <div class="form-row">
+                  <label class="field">
+                    <span>推荐数量</span>
+                    <input id="limitInput" name="limit" type="number" min="1" max="10" value="5" />
+                  </label>
+                  <label class="field">
+                    <span>排序策略</span>
+                    <select id="sortInput" name="sort">
+                      <option value="relevance">相关度优先</option>
+                      <option value="latest">最新优先</option>
+                      <option value="engagement">热度优先</option>
+                    </select>
+                  </label>
+                </div>
+
+                <label class="checkbox-row">
+                  <input id="skipPdfInput" type="checkbox" checked />
+                  <span>快速模式：暂不抓取 PDF 与引用详情</span>
+                </label>
+
+                <button id="builderButton" type="submit">开始构建</button>
+              </form>
+
+              <div id="builderTrace" class="agent-trace"></div>
+
+              <div class="builder-conversation">
+                <div class="section-header">
+                  <div>
+                    <h2>发现对话</h2>
+                    <p class="muted">继续追问、收窄范围、比较论文；候选不会自动进入知识库。</p>
+                  </div>
+                </div>
+                <div id="builderChatMessages" class="builder-chat-messages" aria-live="polite"></div>
+                <form id="builderChatForm" class="builder-chat-form">
+                  <textarea
+                    id="builderChatInput"
+                    rows="3"
+                    placeholder="例如：再找偏 Near-OOD Selection、有公开代码、近两年的论文，并说明为什么值得读。"
+                    required
+                  ></textarea>
+                  <button id="builderChatButton" type="submit">发送</button>
+                </form>
+              </div>
+            </section>
+
+            <section class="tool-panel">
+              <div class="section-header">
+                <div>
+                  <h2>候选池 / 入库确认</h2>
+                  <p id="builderStatus" class="muted">输入研究方向或在对话中追问后，候选论文会先进入这里，由你手动加入知识库。</p>
+                </div>
+              </div>
+              <div id="keywordList" class="chip-list"></div>
+              <div id="sourceStats" class="source-stats"></div>
+              <div id="candidateList" class="paper-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="readerPanel" class="agent-panel">
+          <div class="panel-grid">
+            <section class="tool-panel">
+              <div class="panel-title">
+                <div>
+                  <p class="eyebrow">Stage 2</p>
+                  <h2>Paper Reading Agent</h2>
+                </div>
+                <span class="stage-badge green">精读合成</span>
+              </div>
+
+              <form id="readerForm" class="stack-form">
+                <label class="field">
+                  <span>选择论文</span>
+                  <select id="readerPaperSelect"></select>
+                </label>
+                <label class="field">
+                  <span>精读问题</span>
+                  <textarea
+                    id="readerPromptInput"
+                    rows="5"
+                    placeholder="例如：请结合原文说明这篇论文的方法贡献、实验设置和局限。"
+                    required
+                  ></textarea>
+                </label>
+                <label class="checkbox-row">
+                  <input id="includePdfInput" type="checkbox" />
+                  <span>尝试读取 arXiv PDF 原文片段</span>
+                </label>
+                <button id="readerButton" type="submit">生成精读回答</button>
+              </form>
+            </section>
+
+            <section class="tool-panel output-panel">
+              <div class="section-header">
+                <h2>精读输出</h2>
+                <span id="readerStatus" class="muted">等待输入</span>
+              </div>
+              <div id="readerOutput" class="markdown-output empty-state">论文精读结果会显示在这里。</div>
+            </section>
+          </div>
+        </section>
+
+        <section id="codePanel" class="agent-panel">
+          <div class="panel-grid">
+            <section class="tool-panel">
+              <div class="panel-title">
+                <div>
+                  <p class="eyebrow">Stage 3</p>
+                  <h2>Code Interpreter Agent</h2>
+                </div>
+                <span class="stage-badge amber">代码对齐</span>
+              </div>
+
+              <form id="codeForm" class="stack-form">
+                <label class="field">
+                  <span>GitHub 仓库或本地目录</span>
+                  <input id="repoInput" name="repo" placeholder="https://github.com/user/repo 或 E:\path\repo" required />
+                </label>
+                <label class="field">
+                  <span>关联论文</span>
+                  <select id="codePaperSelect"></select>
+                </label>
+                <label class="field">
+                  <span>解读重点</span>
+                  <textarea
+                    id="codeQuestionInput"
+                    rows="4"
+                    placeholder="例如：请找到训练入口、核心 loss、配置文件和复现实验命令。"
+                  ></textarea>
+                </label>
+                <button id="codeButton" type="submit">分析仓库</button>
+              </form>
+            </section>
+
+            <section class="tool-panel output-panel">
+              <div class="section-header">
+                <h2>代码解读输出</h2>
+                <span id="codeStatus" class="muted">等待仓库</span>
+              </div>
+              <div id="codeOutput" class="markdown-output empty-state">仓库结构、训练入口、运行命令和论文-代码映射会显示在这里。</div>
+            </section>
+          </div>
+        </section>
+
+        <section id="writerPanel" class="agent-panel">
+          <div class="panel-grid">
+            <section class="tool-panel">
+              <div class="panel-title">
+                <div>
+                  <p class="eyebrow">Stage 4</p>
+                  <h2>Paper Writing Agent</h2>
+                </div>
+                <span class="stage-badge violet">研究输出</span>
+              </div>
+
+              <form id="writerForm" class="stack-form">
+                <label class="field">
+                  <span>写作任务</span>
+                  <select id="writerModeSelect">
+                    <option value="outline">生成论文大纲</option>
+                    <option value="related_work">生成 Related Work</option>
+                    <option value="gap">整理研究 Gap</option>
+                    <option value="innovation">包装创新点</option>
+                    <option value="experiment">分析实验结果</option>
+                    <option value="polish">润色论文段落</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>写作要求</span>
+                  <textarea id="writerPromptInput" rows="4" placeholder="例如：围绕 OOD 数据选择写 Related Work，突出可复现和代码可用性。"></textarea>
+                </label>
+                <label class="field">
+                  <span>实验记录</span>
+                  <textarea id="experimentNotesInput" rows="4" placeholder="粘贴主结果、消融、指标或失败案例。"></textarea>
+                </label>
+                <label class="field">
+                  <span>草稿段落</span>
+                  <textarea id="draftInput" rows="5" placeholder="需要润色或改写的段落。"></textarea>
+                </label>
+                <button id="writerButton" type="submit">生成写作输出</button>
+              </form>
+            </section>
+
+            <section class="tool-panel output-panel">
+              <div class="section-header">
+                <h2>写作输出</h2>
+                <span id="writerStatus" class="muted">等待任务</span>
+              </div>
+              <div id="writerOutput" class="markdown-output empty-state">论文大纲、Related Work、Gap 或润色结果会显示在这里。</div>
+            </section>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="/frontend/markdown.js"></script>
+    <script src="/frontend/app.js"></script>
+  </body>
+</html>
